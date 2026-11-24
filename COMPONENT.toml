@@ -3,7 +3,7 @@ name = "shell-config"
 id = "sigmaos-shell-config"
 kind = "component"
 license = "GPL-3.0-or-later"
-inspiration = "omacom/shell-config"
+inspiration = "AaryanSinghChauhan09/SigmaOS-shell-config"
 
 [component.metadata]
 category = "sigmaos"
