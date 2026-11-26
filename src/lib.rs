@@ -58,6 +58,11 @@ fn default_module_config() -> toml::Value {
     toml::Value::Table(Default::default())
 }
 
+/// Strict `#RRGGBB` check — length, `#` prefix, and hex digits only.
+fn is_hex_color(s: &str) -> bool {
+    s.len() == 7 && s.starts_with('#') && s[1..].bytes().all(|b| b.is_ascii_hexdigit())
+}
+
 /// Dock configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DockConfig {
@@ -118,20 +123,16 @@ impl ShellConfig {
                 self.dock.icon_size
             )));
         }
-        if self.theme.accent.len() != 7 || !self.theme.accent.starts_with('#') {
-            return Err(ShellConfigError::Validation(
-                "accent must be #RRGGBB".to_string(),
-            ));
-        }
-        if self.theme.background.len() != 7 || !self.theme.background.starts_with('#') {
-            return Err(ShellConfigError::Validation(
-                "background must be #RRGGBB".to_string(),
-            ));
-        }
-        if self.theme.foreground.len() != 7 || !self.theme.foreground.starts_with('#') {
-            return Err(ShellConfigError::Validation(
-                "foreground must be #RRGGBB".to_string(),
-            ));
+        for (field, color) in [
+            ("accent", &self.theme.accent),
+            ("background", &self.theme.background),
+            ("foreground", &self.theme.foreground),
+        ] {
+            if !is_hex_color(color) {
+                return Err(ShellConfigError::Validation(format!(
+                    "{field} must be #RRGGBB, got {color}"
+                )));
+            }
         }
         if let Some(l) = &self.launcher {
             if l.max_results == 0 || l.max_results > 500 {
@@ -205,6 +206,22 @@ impl ShellConfig {
         }
     }
 
+    /// Enable or disable a bar module by name. Errors when absent.
+    pub fn set_module_enabled(
+        &mut self,
+        name: &str,
+        enabled: bool,
+    ) -> Result<(), ShellConfigError> {
+        let module = self
+            .bar
+            .modules
+            .iter_mut()
+            .find(|m| m.name == name)
+            .ok_or_else(|| ShellConfigError::Validation(format!("unknown module: {name}")))?;
+        module.enabled = enabled;
+        Ok(())
+    }
+
     /// Apply configuration: write to the user's config dir atomically.
     pub fn apply(&self, config_dir: &Path) -> Result<PathBuf, ShellConfigError> {
         self.validate()?;
@@ -227,4 +244,38 @@ pub fn default_config_path() -> Option<PathBuf> {
 pub fn default_config_dir() -> Option<PathBuf> {
     directories::ProjectDirs::from("org", "sigmaos", "sigmaos")
         .map(|p| p.config_dir().to_path_buf())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_colors_must_be_valid() {
+        let mut cfg = ShellConfig::sigmaos_default();
+        cfg.validate().unwrap();
+        cfg.theme.accent = "#gggggg".into();
+        assert!(cfg.validate().is_err());
+        cfg.theme.accent = "#7aa2f7".into();
+        cfg.theme.background = "7aa2f7".into(); // missing '#'
+        assert!(cfg.validate().is_err());
+        cfg.theme.background = "#1a1b26ff".into(); // too long
+        assert!(cfg.validate().is_err());
+    }
+
+    #[test]
+    fn set_module_enabled_toggles() {
+        let mut cfg = ShellConfig::sigmaos_default();
+        cfg.set_module_enabled("clock", false).unwrap();
+        assert!(
+            !cfg.bar
+                .modules
+                .iter()
+                .find(|m| m.name == "clock")
+                .unwrap()
+                .enabled
+        );
+        cfg.set_module_enabled("clock", true).unwrap();
+        assert!(cfg.set_module_enabled("ghost", true).is_err());
+    }
 }

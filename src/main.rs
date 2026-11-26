@@ -32,6 +32,13 @@ enum Commands {
     },
     /// Print the effective config path.
     Path,
+    /// Enable or disable a bar module in the user config.
+    Module {
+        /// Module name (e.g. clock, battery).
+        name: String,
+        /// "on" or "off".
+        state: String,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -69,6 +76,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|p| p.display().to_string())
                     .unwrap_or_else(|| "(unknown)".into())
             );
+        }
+        Commands::Module { name, state } => {
+            let enabled = match state.as_str() {
+                "on" | "enable" | "true" => true,
+                "off" | "disable" | "false" => false,
+                _ => return Err(format!("state must be on|off, got {state}").into()),
+            };
+            let path = default_config_path().ok_or("cannot determine config path")?;
+            let mut cfg = ShellConfig::load(&path)?;
+            cfg.set_module_enabled(&name, enabled)?;
+            cfg.apply(path.parent().unwrap())?;
+            println!("{name} {}", if enabled { "enabled" } else { "disabled" });
         }
     }
     Ok(())
