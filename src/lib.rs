@@ -278,4 +278,62 @@ mod tests {
         cfg.set_module_enabled("clock", true).unwrap();
         assert!(cfg.set_module_enabled("ghost", true).is_err());
     }
+
+    #[test]
+    fn validate_ranges() {
+        let mut cfg = ShellConfig::sigmaos_default();
+        cfg.validate().unwrap();
+        for bad in [0u32, 201] {
+            cfg.bar.height = bad;
+            assert!(cfg.validate().is_err(), "height {bad}");
+        }
+        cfg.bar.height = 32;
+        for bad in [0u32, 257] {
+            cfg.dock.icon_size = bad;
+            assert!(cfg.validate().is_err(), "icon_size {bad}");
+        }
+        cfg.dock.icon_size = 48;
+        for bad in [0usize, 501] {
+            cfg.launcher.as_mut().unwrap().max_results = bad;
+            assert!(cfg.validate().is_err(), "max_results {bad}");
+        }
+        cfg.launcher.as_mut().unwrap().max_results = 50;
+        cfg.validate().unwrap();
+    }
+
+    #[test]
+    fn toml_roundtrip_and_apply() {
+        let dir = tempfile::tempdir().unwrap();
+        let cfg = ShellConfig::sigmaos_default();
+        let toml = cfg.to_toml().unwrap();
+        let back: ShellConfig = toml::from_str(&toml).unwrap();
+        assert_eq!(back.theme.name, "sigmaos-dark");
+        assert_eq!(back.bar.modules.len(), 5);
+        // apply writes shell.toml atomically; load reads it back.
+        let written = cfg.apply(dir.path()).unwrap();
+        assert!(written.ends_with("shell.toml"));
+        let loaded = ShellConfig::load(&written).unwrap();
+        assert_eq!(loaded.launcher.as_ref().unwrap().provider, "fuzzel");
+        assert!(ShellConfig::load(&dir.path().join("missing.toml")).is_err());
+    }
+
+    #[test]
+    fn load_rejects_invalid_toml_and_bad_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let bad = dir.path().join("bad.toml");
+        std::fs::write(&bad, "this is not toml {{{").unwrap();
+        assert!(matches!(
+            ShellConfig::load(&bad),
+            Err(ShellConfigError::TomlDe(_))
+        ));
+        // Valid TOML but out-of-range values -> Validation error.
+        let mut cfg = ShellConfig::sigmaos_default();
+        cfg.bar.height = 0;
+        let p = dir.path().join("range.toml");
+        std::fs::write(&p, cfg.to_toml().unwrap()).unwrap();
+        assert!(matches!(
+            ShellConfig::load(&p),
+            Err(ShellConfigError::Validation(_))
+        ));
+    }
 }
