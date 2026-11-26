@@ -108,12 +108,14 @@ impl ShellConfig {
     pub fn validate(&self) -> Result<(), ShellConfigError> {
         if self.bar.height == 0 || self.bar.height > 200 {
             return Err(ShellConfigError::Validation(format!(
-                "bar height {} out of range 1-200", self.bar.height
+                "bar height {} out of range 1-200",
+                self.bar.height
             )));
         }
         if self.dock.icon_size == 0 || self.dock.icon_size > 256 {
             return Err(ShellConfigError::Validation(format!(
-                "dock icon size {} out of range 1-256", self.dock.icon_size
+                "dock icon size {} out of range 1-256",
+                self.dock.icon_size
             )));
         }
         if self.theme.accent.len() != 7 || !self.theme.accent.starts_with('#') {
@@ -134,7 +136,8 @@ impl ShellConfig {
         if let Some(l) = &self.launcher {
             if l.max_results == 0 || l.max_results > 500 {
                 return Err(ShellConfigError::Validation(format!(
-                    "launcher max_results {} out of range 1-500", l.max_results
+                    "launcher max_results {} out of range 1-500",
+                    l.max_results
                 )));
             }
         }
@@ -153,11 +156,31 @@ impl ShellConfig {
                 position: BarPosition::Top,
                 height: 32,
                 modules: vec![
-                    BarModule { name: "workspaces".into(), enabled: true, config: toml::Value::Table(Default::default()) },
-                    BarModule { name: "clock".into(), enabled: true, config: toml::Value::Table(Default::default()) },
-                    BarModule { name: "system-tray".into(), enabled: true, config: toml::Value::Table(Default::default()) },
-                    BarModule { name: "battery".into(), enabled: true, config: toml::Value::Table(Default::default()) },
-                    BarModule { name: "network".into(), enabled: true, config: toml::Value::Table(Default::default()) },
+                    BarModule {
+                        name: "workspaces".into(),
+                        enabled: true,
+                        config: toml::Value::Table(Default::default()),
+                    },
+                    BarModule {
+                        name: "clock".into(),
+                        enabled: true,
+                        config: toml::Value::Table(Default::default()),
+                    },
+                    BarModule {
+                        name: "system-tray".into(),
+                        enabled: true,
+                        config: toml::Value::Table(Default::default()),
+                    },
+                    BarModule {
+                        name: "battery".into(),
+                        enabled: true,
+                        config: toml::Value::Table(Default::default()),
+                    },
+                    BarModule {
+                        name: "network".into(),
+                        enabled: true,
+                        config: toml::Value::Table(Default::default()),
+                    },
                 ],
                 autohide: false,
             },

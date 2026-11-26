@@ -5,7 +5,10 @@ use sigmaos_shell_config::{default_config_dir, default_config_path, ShellConfig}
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "sigmaos-shell-config", about = "SigmaOS shell configuration manager")]
+#[command(
+    name = "sigmaos-shell-config",
+    about = "SigmaOS shell configuration manager"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -36,11 +39,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Validate { file } => {
-            let path = file.or_else(default_config_path)
+            let path = file
+                .or_else(default_config_path)
                 .ok_or("cannot determine config path")?;
             let cfg = ShellConfig::load(&path)?;
-            println!("valid: {} ({} bar modules, {} pinned apps)",
-                path.display(), cfg.bar.modules.len(), cfg.dock.pinned.len());
+            println!(
+                "valid: {} ({} bar modules, {} pinned apps)",
+                path.display(),
+                cfg.bar.modules.len(),
+                cfg.dock.pinned.len()
+            );
         }
         Commands::Default => {
             print!("{}", ShellConfig::sigmaos_default().to_toml()?);
@@ -55,9 +63,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("applied: {}", path.display());
         }
         Commands::Path => {
-            println!("{}", default_config_path()
-                .map(|p| p.display().to_string())
-                .unwrap_or_else(|| "(unknown)".into()));
+            println!(
+                "{}",
+                default_config_path()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_else(|| "(unknown)".into())
+            );
         }
     }
     Ok(())
